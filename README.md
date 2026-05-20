@@ -1,110 +1,62 @@
-# Data Science Project Boilerplate
+# CNN Image Classifier — Dogs vs. Cats
 
-This boilerplate is designed to kickstart data science projects by providing a basic setup for database connections, data processing, and machine learning model development. It includes a structured folder organization for your datasets and a set of pre-defined Python packages necessary for most data science tasks.
+> A VGG16-inspired convolutional neural network that classifies images as dogs or cats, built from scratch with TensorFlow/Keras and trained with early stopping and model checkpointing.
 
-## Structure
+---
 
-The project is organized as follows:
+## Problem
 
-- **`src/app.py`** → Main Python script where your project will run.
-- **`src/explore.ipynb`** → Notebook for exploration and testing. Once exploration is complete, migrate the clean code to `app.py`.
-- **`src/utils.py`** → Auxiliary functions, such as database connection.
-- **`requirements.txt`** → List of required Python packages.
-- **`models/`** → Will contain your SQLAlchemy model classes.
-- **`data/`** → Stores datasets at different stages:
-  - **`data/raw/`** → Raw data.
-  - **`data/interim/`** → Temporarily transformed data.
-  - **`data/processed/`** → Data ready for analysis.
+Image classification is one of the most foundational tasks in computer vision. This project implements a deep convolutional neural network modeled on the VGG16 architecture to distinguish between dog and cat images — demonstrating the full pipeline from raw image loading and preprocessing to model training, evaluation, and inference.
 
+## Dataset
 
-## ⚡ Initial Setup in Codespaces (Recommended)
+- **Source:** Local image dataset organized into `dog/` and `cat/` subfolders under `data/raw/`
+- **Format:** RGB images, resized to 224 × 224 pixels for VGG16-compatible input
+- **Split:** 80% training / 20% validation via `ImageDataGenerator(validation_split=0.2)`
+- **Classes:** `dog` (index 0), `cat` (index 1)
 
-No manual setup is required, as **Codespaces is automatically configured** with the predefined files created by the academy for you. Just follow these steps:
+## Approach
 
-1. **Wait for the environment to configure automatically**.
-   - All necessary packages and the database will install themselves.
-   - The automatically created `username` and `db_name` are in the **`.env`** file at the root of the project.
-2. **Once Codespaces is ready, you can start working immediately**.
+1. **Data loading:** Used Keras `ImageDataGenerator` with `rescale=1./255` normalization and an 80/20 train/validation split. Images were loaded in batches of 8 at 224×224 resolution.
+2. **Architecture:** Built a VGG16-style CNN from scratch using Keras `Sequential`:
+   - 5 convolutional blocks with increasing filter depth (64 → 128 → 256 → 512 → 512)
+   - Each block uses 3×3 `same` padding convolutions with ReLU activations, followed by 2×2 max pooling
+   - Flattened output feeds into two 4,096-unit dense layers, then a 2-unit softmax output layer
+3. **Training:** Compiled with `Adam (lr=0.001)` and `categorical_crossentropy` loss. Used `EarlyStopping` (patience=3) on validation accuracy and `ModelCheckpoint` to save the best weights.
+4. **Inference:** Loaded the saved model to run predictions on individual images, outputting the class with the higher softmax probability.
 
+## Results
 
-## 💻 Local Setup (Only if you can't use Codespaces)
+The model was trained for 3 epochs on a small local dataset of **18 images** (16 training, 2 validation). Validation accuracy plateaued at **50%** across all epochs — effectively random chance — which is expected given the dataset size. Early stopping triggered after epoch 3 and restored the best weights from epoch 1. The training loss did decrease steadily (0.76 → 0.69), confirming the model was learning, but the validation set was too small to show meaningful improvement.
 
-**Prerequisites**
+The primary value of this project is in the architectural implementation: building and training a full VGG16-style CNN end-to-end, not the benchmark performance. Re-running with the full Kaggle Dogs vs. Cats dataset (25,000 images) would be the natural next step.
 
-Make sure you have Python 3.11+ installed on your machine. You will also need pip to install the Python packages.
+## Tech stack
 
-**Installation**
+`Python` · `TensorFlow` · `Keras` · `NumPy` · `Matplotlib`
 
-Clone the project repository to your local machine.
-
-Navigate to the project directory and install the required Python packages:
+## Run it locally
 
 ```bash
+git clone https://github.com/matthewkane-ml/ML_DeepLearning_MTK.git
+cd ML_DeepLearning_MTK
 pip install -r requirements.txt
+
+# Organize your images into:
+# data/raw/dog/   (dog images)
+# data/raw/cat/   (cat images)
+
+# Then open and run the notebook
+jupyter notebook src/DeepLearning-VGG16.ipynb
 ```
 
-**Create a database (if necessary)**
+## What I'd do next
 
-Create a new database within the Postgres engine by customizing and executing the following command:
+- Use **transfer learning** with pre-trained VGG16 ImageNet weights instead of training from scratch — this would dramatically improve accuracy with a small dataset
+- Add **data augmentation** (horizontal flips, rotations, zoom) to reduce overfitting
+- Train for more epochs with a lower learning rate schedule to allow the model to converge more fully
+- Extend to a multi-class classifier beyond binary dog/cat
 
-```bash
-$ psql -U postgres -c "DO \$\$ BEGIN 
-    CREATE USER my_user WITH PASSWORD 'my_password'; 
-    CREATE DATABASE my_database OWNER my_user; 
-END \$\$;"
-```
-Connect to the Postgres engine to use your database, manipulate tables, and data:
+---
 
-```bash
-$ psql -U my_user -d my_database
-```
-
-Once inside PSQL, you can create tables, run queries, insert, update, or delete data, and much more!
-
-**Environment Variables**
-
-Create a .env file in the root directory of the project to store your environment variables, such as your database connection string:
-
-```makefile
-DATABASE_URL="postgresql://<USER>:<PASSWORD>@<HOST>:<PORT>/<DB_NAME>"
-
-#example
-DATABASE_URL="postgresql://my_user:my_password@localhost:5432/my_database"
-```
-
-## Running the Application
-
-To run the application, execute the app.py script from the root directory of the project:
-
-```bash
-python src/app.py
-```
-
-## Adding Models
-
-To add SQLAlchemy model classes, create new Python script files within the models/ directory. These classes should be defined according to your database schema.
-
-Example model definition (`models/example_model.py`):
-
-```py
-from sqlalchemy.orm import declarative_base
-from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
-
-Base = declarative_base()
-
-class ExampleModel(Base):
-    __tablename__ = 'example_table'
-    id: Mapped[int] = mapped_column(primary_key=True)
-    username: Mapped[str] = mapped_column(unique=True)
-```
-
-## Working with Data
-
-You can place your raw datasets in the data/raw directory, intermediate datasets in data/interim, and processed datasets ready for analysis in data/processed.
-
-To process data, you can modify the app.py script to include your data processing steps, using pandas for data manipulation and analysis.
-
-## Contributors
-
-This project is maintained by [matthewkane-ml](https://github.com/matthewkane-ml).
+**Author:** Matthew Kane — [LinkedIn](https://www.linkedin.com/in/thomas-kane-392094410/) · [GitHub portfolio](https://github.com/matthewkane-ml)

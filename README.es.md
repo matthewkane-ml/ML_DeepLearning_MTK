@@ -1,110 +1,62 @@
-# Plantilla de Proyecto de Ciencia de Datos
+# Clasificador de Imágenes con CNN — Perros vs. Gatos
 
-Esta plantilla está diseñada para impulsar proyectos de ciencia de datos proporcionando una configuración básica para conexiones de base de datos, procesamiento de datos, y desarrollo de modelos de aprendizaje automático. Incluye una organización estructurada de carpetas para tus conjuntos de datos y un conjunto de paquetes de Python predefinidos necesarios para la mayoría de las tareas de ciencia de datos.
+> Una red neuronal convolucional inspirada en VGG16 que clasifica imágenes como perros o gatos, construida desde cero con TensorFlow/Keras y entrenada con parada anticipada y guardado del mejor modelo.
 
-## Estructura
+---
 
-El proyecto está organizado de la siguiente manera:
+## Problema
 
-- **`src/app.py`** → Script principal de Python donde correrá tu proyecto.
-- **`src/explore.ipynb`** → Notebook para exploración y pruebas. Una vez finalizada la exploración, migra el código limpio a `app.py`.
-- **`src/utils.py`** → Funciones auxiliares, como conexión a bases de datos.
-- **`requirements.txt`** → Lista de paquetes de Python necesarios.
-- **`models/`** → Contendrá tus clases de modelos SQLAlchemy.
-- **`data/`** → Almacena los datasets en diferentes etapas:
-  - **`data/raw/`** → Datos sin procesar.
-  - **`data/interim/`** → Datos transformados temporalmente.
-  - **`data/processed/`** → Datos listos para análisis.
+La clasificación de imágenes es una de las tareas más fundamentales en visión por computadora. Este proyecto implementa una red neuronal convolucional profunda modelada sobre la arquitectura VGG16 para distinguir entre imágenes de perros y gatos — demostrando el pipeline completo desde la carga y preprocesamiento de imágenes hasta el entrenamiento, evaluación e inferencia del modelo.
 
+## Conjunto de datos
 
-## ⚡ Configuración Inicial en Codespaces (Recomendado)
+- **Fuente:** Dataset local de imágenes organizado en subcarpetas `dog/` y `cat/` dentro de `data/raw/`
+- **Formato:** Imágenes RGB, redimensionadas a 224 × 224 píxeles para entrada compatible con VGG16
+- **División:** 80% entrenamiento / 20% validación mediante `ImageDataGenerator(validation_split=0.2)`
+- **Clases:** `dog` (índice 0), `cat` (índice 1)
 
-No es necesario realizar ninguna configuración manual, ya que **Codespaces se configura automáticamente** con los archivos predefinidos que ha creado la academia para ti. Simplemente sigue estos pasos:
+## Metodología
 
-1. **Espera a que el entorno se configure automáticamente**.
-   - Todos los paquetes necesarios y la base de datos se instalarán por sí mismos.
-   - El `username` y `db_name` creados automáticamente están en el archivo **`.env`** en la raíz del proyecto.
-2. **Una vez que Codespaces esté listo, puedes comenzar a trabajar inmediatamente**.
+1. **Carga de datos:** `ImageDataGenerator` de Keras con normalización `rescale=1./255` y división 80/20 entrenamiento/validación. Imágenes cargadas en lotes de 8 con resolución 224×224.
+2. **Arquitectura:** CNN estilo VGG16 construida desde cero con `Sequential` de Keras:
+   - 5 bloques convolucionales con profundidad de filtros creciente (64 → 128 → 256 → 512 → 512)
+   - Cada bloque usa convoluciones 3×3 con padding `same` y activaciones ReLU, seguidas de max pooling 2×2
+   - La salida aplanada alimenta dos capas densas de 4.096 unidades, seguidas de una capa de salida softmax de 2 unidades
+3. **Entrenamiento:** Compilado con `Adam (lr=0.001)` y pérdida `categorical_crossentropy`. Uso de `EarlyStopping` (paciencia=3) sobre la exactitud de validación y `ModelCheckpoint` para guardar los mejores pesos.
+4. **Inferencia:** Carga del modelo guardado para ejecutar predicciones en imágenes individuales, devolviendo la clase con mayor probabilidad softmax.
 
+## Resultados
 
-## 💻 Configuración en Local (Solo si no puedes usar Codespaces)
+El modelo fue entrenado durante 3 épocas sobre un dataset local pequeño de **18 imágenes** (16 entrenamiento, 2 validación). La exactitud de validación se estabilizó en **50%** en todas las épocas — esencialmente azar — lo cual es esperable dado el tamaño del dataset. La parada anticipada se activó al terminar la época 3 y restauró los mejores pesos de la época 1. La pérdida de entrenamiento sí disminuyó de forma constante (0,76 → 0,69), confirmando que el modelo estaba aprendiendo, pero el conjunto de validación era demasiado pequeño para mostrar una mejora significativa.
 
-**Prerrequisitos**
+El valor principal de este proyecto radica en la implementación arquitectónica: construir y entrenar una CNN completa estilo VGG16 de extremo a extremo. Volver a ejecutar con el dataset completo de Perros vs. Gatos de Kaggle (25.000 imágenes) sería el paso natural siguiente.
 
-Asegúrate de tener Python 3.11+ instalado en tu máquina. También necesitarás pip para instalar los paquetes de Python.
+## Tecnologías utilizadas
 
-**Instalación**
+`Python` · `TensorFlow` · `Keras` · `NumPy` · `Matplotlib`
 
-Clona el repositorio del proyecto en tu máquina local.
-
-Navega hasta el directorio del proyecto e instala los paquetes de Python requeridos:
+## Ejecución local
 
 ```bash
+git clone https://github.com/matthewkane-ml/ML_DeepLearning_MTK.git
+cd ML_DeepLearning_MTK
 pip install -r requirements.txt
+
+# Organiza tus imágenes en:
+# data/raw/dog/   (imágenes de perros)
+# data/raw/cat/   (imágenes de gatos)
+
+# Luego abre y ejecuta el notebook
+jupyter notebook src/DeepLearning-VGG16.ipynb
 ```
 
-**Crear una base de datos (si es necesario)**
+## Próximos pasos
 
-Crea una nueva base de datos dentro del motor Postgres personalizando y ejecutando el siguiente comando: 
+- Usar **transfer learning** con los pesos preentrenados de VGG16 en ImageNet en lugar de entrenar desde cero — esto mejoraría drásticamente la exactitud con un dataset pequeño
+- Añadir **aumento de datos** (volteos horizontales, rotaciones, zoom) para reducir el sobreajuste
+- Entrenar más épocas con un programa de tasa de aprendizaje decreciente para permitir una convergencia más completa del modelo
+- Extender a un clasificador multiclase más allá del binario perro/gato
 
-```bash
-$ psql -U postgres -c "DO \$\$ BEGIN 
-    CREATE USER mi_usuario WITH PASSWORD 'mi_contraseña'; 
-    CREATE DATABASE mi_base_de_datos OWNER mi_usuario; 
-END \$\$;"
-```
-Conéctate al motor Postgres para usar tu base de datos, manipular tablas y datos: 
+---
 
-```bash
-$ psql -U mi_usuario -d mi_base_de_datos
-```
-
-¡Una vez que estés dentro de PSQL podrás crear tablas, hacer consultas, insertar, actualizar o eliminar datos y mucho más!
-
-**Variables de entorno**
-
-Crea un archivo .env en el directorio raíz del proyecto para almacenar tus variables de entorno, como tu cadena de conexión a la base de datos:
-
-```makefile
-DATABASE_URL="postgresql://<USUARIO>:<CONTRASEÑA>@<HOST>:<PUERTO>/<NOMBRE_BD>"
-
-#example
-DATABASE_URL="postgresql://mi_usuario:mi_contraseña@localhost:5432/mi_base_de_datos"
-```
-
-## Ejecutando la Aplicación
-
-Para ejecutar la aplicación, ejecuta el script app.py desde la raíz del directorio del proyecto:
-
-```bash
-python src/app.py
-```
-
-## Añadiendo Modelos
-
-Para añadir clases de modelos SQLAlchemy, crea nuevos archivos de script de Python dentro del directorio models/. Estas clases deben ser definidas de acuerdo a tu esquema de base de datos.
-
-Definición del modelo de ejemplo (`models/example_model.py`):
-
-```py
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
-
-Base = declarative_base()
-
-class ExampleModel(Base):
-    __tablename__ = 'example_table'
-    id: Mapped[int] = mapped_column(primary_key=True)
-    username: Mapped[str] = mapped_column(unique=True)
-```
-
-## Trabajando con Datos
-
-Puedes colocar tus conjuntos de datos brutos en el directorio data/raw, conjuntos de datos intermedios en data/interim, y los conjuntos de datos procesados listos para el análisis en data/processed.
-
-Para procesar datos, puedes modificar el script app.py para incluir tus pasos de procesamiento de datos, utilizando pandas para la manipulación y análisis de datos.
-
-## Contribuyentes
-
-Este proyecto es mantenido por [matthewkane-ml](https://github.com/matthewkane-ml).
+**Autor:** Matthew Kane — [LinkedIn](https://www.linkedin.com/in/thomas-kane-392094410/) · [Portafolio GitHub](https://github.com/matthewkane-ml)
